@@ -1,0 +1,8 @@
+plugins_enabled:
+  renderers:
+    openssh: True
+    putty: True
+    wssh_commands: True
+    realvnc: True
+    jstree: True
+    mstsc: False

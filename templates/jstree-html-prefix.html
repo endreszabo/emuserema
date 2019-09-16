@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Endre's session launcher</title>
+	<style>
+	html { margin:0; padding:0; font-size:62.5%; }
+	body { max-width:800px; min-width:300px; margin:0 auto; padding:20px 10px; font-size:14px; font-size:1.4em; }
+	h1 { font-size:1.8em; }
+	.demo { overflow:auto; border:1px solid silver; min-height:100px; }
+	</style>
+	<link rel="stylesheet" href=".css/jstree.min.css" />
+</head>
+<body>
+	<h1>Endre's Session Launcher</h1>
+
+	<input type="text" id="demo_q" value="" class="input" style="margin:0em auto 1em auto; display:block; padding:4px; border-radius:4px; border:1px solid silver;" placeholder="Search" autofocus/><div id="searchmode">Mode: Glob</div>
+	<div id="jstree_demo" class="demo" style="margin-top:1em; min-height:200px;"></div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src=".js/jstree.min.js"></script>
+
+	<script>
+
+$(function() {
+	$("#demo_q").focus();
+});
+var to = false;
+$('#demo_q').keyup(function () {
+	if(to) { clearTimeout(to); }
+	to = setTimeout(function () {
+		var v = $('#demo_q').val();
+		$('#jstree_demo').jstree(true).search(v);
+	}, 20);
+});
+$('#demo_q').keypress(function (event) {
+	var keycode = (event.keyCode ? event.keyCode : event.which);
+	if(keycode == '13'){
+		if (window.results.length == 1) {
+			var url = window.results[0].children[2].href;
+			var win = window.open(url, '_blank');
+			if (win) { win.focus(); }
+		} else {
+			window.results.each(function(item) {
+				var url = window.results[item].children[2].href;
+				console.log('Opening URL', url);
+				window.open(url, 'EMUSEREMA-'+url);
+			});
+		}
+	}
+}).keydown(function(e){
+    if(e.keyCode == 40)
+        $('#jstree_demo').focus();
+});
+
+$('#jstree_demo').on('changed.jstree', function (e, data) {
+    var i, j = [];
+    for(i = 0, j = data.selected.length; i < j; i++) {
+		var url = data.instance.get_node(data.selected[i]).a_attr.href;
+		if (url !== '#') {
+			var win = window.open(url, '_blank');
+			if (win) { win.focus(); }
+		}
+	}
+  }).jstree(
+
+	  {
+  "core" : {
+    "animation" : 0,
+    "check_callback" : true,
+    "themes" : { "stripes" : true },
+    "data" : 

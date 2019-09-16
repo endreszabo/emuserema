@@ -1,0 +1,11 @@
+
+Host github.com
+	HostName=github.com
+	Port=22
+
+# Default host overriding
+# Not to be able to connect to undefined hosts leads to.. SECURITY
+
+Host *
+	Hostname=255.255.255.255
+	Port=65534

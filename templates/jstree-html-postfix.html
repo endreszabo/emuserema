@@ -1,0 +1,48 @@
+  },
+  "search": {
+	  "fuzzy": true,
+	  "show_only_matches": true,
+	  "show_only_matches_children": true,
+	  "search_callback": function(str, node) {
+		  var matchstr=node.text;
+		  if(matchstr.indexOf('(')>5) {
+			  matchstr=matchstr.substr(0,matchstr.indexOf('(')-1);
+		  }
+		  if (str.match(new RegExp('[^a-z0-9A-Z]')) === null) {
+			  str=str.split('').join('.*');
+			  $('#searchmode').text('Mode: Glob');
+		  } else
+			  $('#searchmode').text('Mode: RegExp');
+		  return matchstr.match(new RegExp(str,'i')) !== null;
+	  }
+  },
+  "types" : {
+    "#" : {
+      "max_children" : 1,
+      "max_depth" : 4,
+      "valid_children" : ["root"]
+    },
+    "root" : {
+//      "icon" : "/static/3.3.8/assets/images/tree_icon.png",
+      "valid_children" : ["default"]
+    },
+    "default" : {
+      "valid_children" : ["default","file"]
+    },
+    "file" : {
+ //     "icon" : "glyphicon glyphicon-file",
+      "valid_children" : []
+    }
+  },
+  "plugins" : [
+    "search", "types", "wholerow"
+  ]
+}
+
+).bind("search.jstree", function(e, data) {
+	window.results=data.nodes;
+});
+
+	</script>
+</body>
+</html>
