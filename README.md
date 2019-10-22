@@ -30,3 +30,4 @@
 - [ ] Support for a general TCP service for use with stunnel / haproxy / socat
 - [ ] Support for mosh
 - [ ] Use a templating engine to generate SSH configuration and HTML files
+- [ ] Tests ;)
