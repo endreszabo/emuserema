@@ -7,10 +7,6 @@ CFGDIR=PREFIX+'/etc'
 LIBDIR=PREFIX+'/local/lib/emuserema'
 DESTINATION_HOSTS_FILE=PREFIX+'/etc/emuserema/per-destination-commands'
 
-HOST_COMMENTS_DIR=PREFIX+'/etc/emuserema/host-comments'
-
-REDIRECT_COUNTER_FILE='redirect-counter.txt'
-
 from yamlloader import loadyaml, dump
 from utils import traverse
 
