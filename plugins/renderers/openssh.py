@@ -1,13 +1,22 @@
 
 from services import SSHservice
 from plugin_manager import Plugin
+from os import listdir, path, unlink
 
 class OpenSSHRenderer(Plugin):
     def config(self):
         self.description = 'openssh client configuration files renderer'
         self.ssh_config_files={}
 
+    def clean_dir(self):
+        folder = 'output/SSH/openssh'
+        for the_file in listdir(folder):
+            file_path = path.join(folder, the_file)
+            if not path.islink(file_path) and path.isfile(file_path):
+                unlink(file_path)
+
     def render_openssh(self):
+        self.clean_dir()
         for key, service in self.services.items():
             #service=self.services[key]
             if isinstance(service, SSHservice):

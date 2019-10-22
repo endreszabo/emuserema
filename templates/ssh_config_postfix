@@ -2,6 +2,11 @@
 Host github.com
 	HostName=github.com
 	Port=22
+	User=git
+
+Host localhost
+	Hostname=127.0.0.1
+	Port=22
 
 # Default host overriding
 # Not to be able to connect to undefined hosts leads to.. SECURITY
