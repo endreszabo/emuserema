@@ -31,3 +31,4 @@
 - [ ] Support for mosh
 - [ ] Use a templating engine to generate SSH configuration and HTML files
 - [ ] Tests ;)
+- [ ] Host key management

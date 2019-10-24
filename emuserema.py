@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from os.path import expanduser
 from sys import exit
 from plugin_manager import PluginManager
@@ -67,6 +69,9 @@ def create_worlds(path, service):
     return service
 
 if __name__ == '__main__':
+    main()
+
+def main():
     data=loadyaml('emuserema.yaml')
 
     config=loadyaml('config.yaml')
