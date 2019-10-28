@@ -172,7 +172,6 @@ class VNCservice(AbstractService):
 
     def process_proxy(self, via_service, redirect_factory):
         bindip, bindport = redirect_factory.allocate(via_service, self)
-        self.original_host = self.kwargs['Host']
 
         try:  # Direct port definition
             self.kwargs['Host'].index('::')
@@ -187,8 +186,9 @@ class VNCservice(AbstractService):
                 targetport = 5900
 
         via_service.pb.append('\t# EMUSEREMA added implicit redirection for VNC service "%s" at listening address: %s' % (self.tag, self.kwargs['Host']) )
-        self.kwargs['Host'] = '%s:%s' % (bindip, bindport)
+        self.original_host = self.kwargs['Host']
         via_service.pb.append('\tLocalForward = %s %s:%s' % (self.kwargs['Host'], targetip, targetport))
+        self.kwargs['Host'] = '%s:%s' % (bindip, bindport)
 
 
 class ServiceFactory(object):
