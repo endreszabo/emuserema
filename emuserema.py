@@ -68,8 +68,6 @@ def create_worlds(path, service):
 
     return service
 
-if __name__ == '__main__':
-    main()
 
 def main():
     data=loadyaml('emuserema.yaml')
@@ -91,3 +89,6 @@ def main():
     redirect_factory.commit()
 
     #dump(data, stdout, default_flow_style=False)
+
+if __name__ == '__main__':
+    main()
