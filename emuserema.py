@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from os.path import expanduser
-from sys import exit
+from sys import exit, argv
 from plugin_manager import PluginManager
 
 PREFIX=expanduser("~")
@@ -81,6 +81,11 @@ def main():
     data=traverse(data, callback=redirector)
 
     data=traverse(data, callback=create_worlds)
+
+    if len(argv)>1:
+        if argv[1] == '-t':
+            print("Configuration parsing was successful.")
+            exit(0)
 
     renderer_plugins = PluginManager('plugins.renderers')
 

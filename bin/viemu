@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -o nounset
+set -o errexit
+
+cd ~/etc/emuserema
+
+if ! [[ -s emuserema.yaml ]]; then
+	cp emuserema.yaml.example emuserema.yaml
+fi
+
+while :; do
+	YAMLFILES="$(find * -name \*.yaml | grep -vE '^(config|lib/redirects).yaml' | sort -V)"
+	BT="$(stat -L -c "%Y %s" $YAMLFILES)"
+	${EDITOR:-vim} -p $YAMLFILES
+	AT="$(stat -L -c "%Y %s" $YAMLFILES)"
+	if [ "$BT" == "$AT" ]; then
+		echo "No changed were made. Exiting."
+		exit 0
+	fi
+
+	if ! ./emuserema.py -t; then
+		tput civis
+		echo -e "\nEMUSEREMA failed to validate config file. See errors above\n"
+		echo "Press 'R' to retry edit."
+		echo "Press 'X' to continue with rendering anyway. This will most likely fail again."
+		echo "Press 'Q' to quit."
+
+		while :; do
+			read -r -s -p '' -n 1 KEY
+			tput cnorm;
+
+			[[ $KEY == 'Q' || $KEY == 'q' ]] && exit 1;
+			[[ $KEY == 'X' || $KEY == 'x' ]] && break 2;
+			[[ $KEY == 'R' || $KEY == 'r' ]] && break;
+		done
+	else
+		break
+	fi
+done
+
+echo "Applying changes."
+
+exec ./emuserema.py
+
