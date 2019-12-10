@@ -1,109 +1,132 @@
+
 #!/usr/bin/env python3
 
 from os.path import expanduser
 from sys import exit, argv
-from plugin_manager import PluginManager
-from services import AbstractService
-from world import World
-from yamlloader import loadyaml
-from utils import traverse
-from services import *
-from redirects import RedirectFactory
+from emuserema.plugin_manager import PluginManager
+from emuserema.services import AbstractService
+from emuserema.world import World
+from emuserema.yamlloader import EmuseremaYamlLoader
+from emuserema.utils import traverse
+from emuserema.services import *
+from emuserema.redirects import RedirectFactory
 # if yaml dumping is to be enabled:
 #from yamlloader import dump
 #from sys import stdout
 
-PREFIX = expanduser("~")
-CFGDIR = PREFIX + '/etc'
-LIBDIR = PREFIX + '/local/lib/emuserema'
-DESTINATION_HOSTS_FILE = PREFIX + '/etc/emuserema/per-destination-commands'
-
-
-service_factory = ServiceFactory()
-services = {}
-
-redirect_factory = RedirectFactory()
-
-worlds = {}
-
-
-def service_builder(path, obj):
-    if path and path[0] == 'defaults':
-        return obj
-    if isinstance(obj, dict):
-        if '_type' in obj:
-            if service_factory.supported(obj):
-                service = service_factory.create(path, **obj)
-                services[service.tag] = service
-                return service
-            else:
-                raise NotImplementedError("Object type of '%s' is not supported" % obj['_type'])
-    return obj
-
-
-def via_resolver(path, service):
-    if path and path[0] == 'defaults':
-        return service
-    if isinstance(service, AbstractService):
-        if service.via is None:
-            return service
-        service.via = services[service.via]
-    return service
-
-
-def redirector(path, service):
-    if path and path[0] == 'defaults':
-        return service
-    if isinstance(service, AbstractService):
-        if service.via is None:
-            return service
-        service.process_proxy(service.via, redirect_factory)
-
-    return service
-
-
-def create_worlds(path, service):
-    if path and path[0] == 'defaults':
-        return service
-    if isinstance(service, AbstractService):
-        if service.world not in worlds:
-            worlds[service.world] = World(service.world)
-        #service.world=worlds[service.world]
-        worlds[service.world].append(service)
-
-    return service
+#CFGDIR = PREFIX + '/etc'
+#LIBDIR = PREFIX + '/local/lib/emuserema'
+#DESTINATION_HOSTS_FILE = PREFIX + '/etc/emuserema/per-destination-commands'
+#from IPython import embed
 
 
 class Emuserema(object):
-    def __init__(self, definitions='emuserema.yaml', config='config.yaml'):
-        self._definitions = definitions
-        self._config = config
+    def __init__(self, definitions_directory='~/.config/emuserema'):
+        self._definitions_directory = expanduser(definitions_directory)
+
+        self.yamlloader = EmuseremaYamlLoader(self._definitions_directory)
+        self.redirect_factory = RedirectFactory(definitions_directory=self._definitions_directory,
+                yamlloader=self.yamlloader)
+        self.service_factory = ServiceFactory()
+        self.services = {}
+        self.worlds = {}
+
         self.load()
 
     def __del__(self):
         self.commit()
 
-    def load(self):
-        self.data = loadyaml(self._definitions)
+    def service_builder(self, path, obj):
+        if path and path[0] == 'defaults':
+            return obj
+        if isinstance(obj, dict):
+            if '_type' in obj:
+                if self.service_factory.supported(obj):
+                    service = self.service_factory.create(path, **obj)
+                    self.services[service.tag] = service
+                    return service
+                else:
+                    raise NotImplementedError("Object type of '%s' is not supported" % obj['_type'])
+        return obj
 
-        self.data = traverse(self.data, callback=service_builder)
-        self.data = traverse(self.data, callback=via_resolver)
-        self.data = traverse(self.data, callback=redirector)
-        self.data = traverse(self.data, callback=create_worlds)
+    def via_resolver(self, path, service):
+        if path and path[0] == 'defaults':
+            return service
+        if isinstance(service, AbstractService):
+            if service.via is None:
+                return service
+            service.via = self.services[service.via]
+        return service
+
+    def create_worlds(self, path, service):
+        if path and path[0] == 'defaults':
+            return service
+        if isinstance(service, AbstractService):
+            if service.world not in self.worlds:
+                self.worlds[service.world] = World(service.world)
+            #service.world=worlds[service.world]
+            self.worlds[service.world].append(service)
+
+        return service
+
+    def redirector(self, path, service):
+        if path and path[0] == 'defaults':
+            return service
+        if isinstance(service, AbstractService):
+            if service.via is None:
+                return service
+            service.process_proxy(service.via, self.redirect_factory)
+
+        return service
+
+    def load(self):
+        self.data = self.yamlloader.loadyaml('emuserema.yaml')
+
+        self.data = traverse(self.data, callback=self.service_builder)
+        self.data = traverse(self.data, callback=self.via_resolver)
+        self.data = traverse(self.data, callback=self.redirector)
+        self.data = traverse(self.data, callback=self.create_worlds)
         #dump(self.data, stdout, default_flow_style=False)
 
     def render(self):
-        config = loadyaml('config.yaml')
+        config = self.yamlloader.loadyaml('config.yaml')
 
-        renderer_plugins = PluginManager('plugins.renderers')
+        renderer_plugins = PluginManager('emuserema.plugins.renderers', config=config['plugins']['renderers'])
 
-        renderer_plugins.run_selected(filter(lambda enabled: config['plugins_enabled']['renderers'][enabled] == True, config['plugins_enabled']['renderers']), worlds=worlds, services=services)
+        renderer_plugins.run_selected(filter(lambda name: config['plugins']['renderers'][name]['enabled'] is True,
+            config['plugins']['renderers']), worlds=self.worlds, services=self.services)
 
     def populate_ansible_inventory(self, inventory=None, world='default'):
+        inventory.add_host('teszt')
+
+        world = self.worlds[world]
+        for service in self.services:
+            service = self.services[service]
+            if self.worlds[service.world] == world:
+                if isinstance(service, SSHservice) or isinstance(service, DummyService) or '_ansible_hostvars' in service.kwargs:
+                    inventory.add_host(service.tag)
+                    inventory.set_variable(service.tag, 'ansible_ssh_common_args',
+                        '-F /home/e/.ssh/configs/%s' % service.world)
+                    #we must fix this somehow
+                    #inventory.set_variable(service.tag, 'ansible_ssh_executable',
+                    #    'SSH_AUTH_SOCK=/home/e/.ssh/agents/%s /usr/bin/ssh' % service.world)
+                    if '_ansible_hostvars' in service.kwargs:
+                        for key, value in service.kwargs['_ansible_hostvars'].items():
+                            inventory.set_variable(service.tag, key, value)
+                    if '_ansible_groups' in service.kwargs:
+                        for group in service.kwargs['_ansible_groups']:
+                            group = group.lower().replace(' ', '_')
+                            group = inventory.add_group(group)
+                            inventory.add_child(group, service.tag)
+                    for group in service.path[1:-1] + ['emuserema_' + '__'.join(service.path[1:-1])]:
+                        group = group.lower().replace(' ', '_')
+                        group = inventory.add_group(group)
+                        inventory.add_child(group, service.tag)
+#        embed()
         pass
 
     def commit(self):
-        redirect_factory.commit()
+        self.redirect_factory.commit()
 
 
 def main():
