@@ -1,22 +1,18 @@
 
-from services import SSHservice
-from plugin_manager import Plugin
-from os import listdir, path, unlink
+from emuserema.services import SSHservice
+from emuserema.plugin_manager import Plugin
+from emuserema.utils import makedir_getfd, cleanup_files
+
 
 class OpenSSHRenderer(Plugin):
     def config(self):
         self.description = 'openssh client configuration files renderer'
-        self.ssh_config_files={}
+        self.ssh_config_files = {}
 
-    def clean_dir(self):
-        folder = 'output/SSH/openssh'
-        for the_file in listdir(folder):
-            file_path = path.join(folder, the_file)
-            if not path.islink(file_path) and path.isfile(file_path):
-                unlink(file_path)
+    def cleanup(self):
+        cleanup_files(self._config['output_dir'])
 
     def render_openssh(self):
-        self.clean_dir()
         for key, service in self.services.items():
             #service=self.services[key]
             if isinstance(service, SSHservice):
@@ -33,29 +29,29 @@ class OpenSSHRenderer(Plugin):
         self.close_ssh_config_files()
 
     def render_kv(self, service):
-        rv=[]
+        rv = []
         for key, value in service.kwargs.items():
-            if key[0]!='_': #Blindly copy all the non meta settings
+            if key[0] != '_':  # Blindly copy all the non meta settings
                 rv.append((key, value))
         for bind_hostport, target_hostport in service.forwards['local'].items():
             if target_hostport[1]:
-                rv.append('#'+target_hostport[1])
+                rv.append('#' + target_hostport[1])
             rv.append(('LocalForward', "%s %s" % (bind_hostport, target_hostport[0])))
         for bind_hostport, target_hostport in service.forwards['remote']:
             if target_hostport[1]:
-                rv.append('#'+target_hostport[1])
+                rv.append('#' + target_hostport[1])
                 rv.append(('RemoteForward', "%s %s" % (bind_hostport, target_hostport[0])))
         for bind_hostport in service.forwards['dynamic']:
             if target_hostport[1]:
-                rv.append('#'+target_hostport[1])
+                rv.append('#' + target_hostport[1])
                 rv.append(('DynamicForward', "%s" % (bind_hostport, target_hostport[0])))
         return rv
 
     def open_ssh_config_file(self, world_name):
         if world_name not in self.ssh_config_files:
-            self.ssh_config_files[world_name]=open("output/SSH/openssh/%s" % world_name, 'w')
+            self.ssh_config_files[world_name] = makedir_getfd("%s/%s" % (self._config['output_dir'], world_name))
             try:
-                with open('templates/ssh_config_prefix','r') as preamble:
+                with open('templates/ssh_config_prefix', 'r') as preamble:
                     for line in preamble:
                         self.ssh_config_files[world_name].write(line)
             except FileNotFoundError:
@@ -66,7 +62,7 @@ class OpenSSHRenderer(Plugin):
     def close_ssh_config_files(self):
         for key, ssh_config_file in self.ssh_config_files.items():
             try:
-                with open('templates/ssh_config_postfix','r') as postfix:
+                with open('templates/ssh_config_postfix', 'r') as postfix:
                     for line in postfix:
                         ssh_config_file.write(line)
             except FileNotFoundError:
@@ -74,6 +70,6 @@ class OpenSSHRenderer(Plugin):
             ssh_config_file.close()
 
     def run(self, **kwargs):
-        self.services=kwargs['services']
-        self.worlds=kwargs['worlds']
+        self.services = kwargs['services']
+        self.worlds = kwargs['worlds']
         self.render_openssh()

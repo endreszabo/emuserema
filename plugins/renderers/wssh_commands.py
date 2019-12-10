@@ -1,6 +1,7 @@
+from emuserema.services import SSHservice
+from emuserema.plugin_manager import Plugin
+from emuserema.utils import makedir_getfd
 
-from services import SSHservice
-from plugin_manager import Plugin
 
 class WsshCommandsRenderer(Plugin):
     """This plugin is just the identity function: it returns the argument
@@ -8,19 +9,16 @@ class WsshCommandsRenderer(Plugin):
     def config(self):
         self.description = 'wssh launcher framework commands generator'
 
-    def run(self, **kwargs):
-        return self.__class__.__name__
-
     def render_commands(self):
-        with open('output/WSSH/commands', 'w') as dmenu:
+        with makedir_getfd(self._config['output_file']) as dmenu:
             print(self.render_kv(), file=dmenu)
 
     def render_kv(self):
-        rv=[]
+        rv = []
         for key, service in self.services.items():
             #service=self.services[key]
             if isinstance(service, SSHservice):
-                if ('_gui' not in service.kwargs or service.kwargs['_gui'] == True):
+                if ('_gui' not in service.kwargs or service.kwargs['_gui'] is True):
                     rv.append("%s%s" % (
                         '/'.join(service.path[1:]),
                         service.label)
@@ -31,6 +29,6 @@ class WsshCommandsRenderer(Plugin):
         """The actual implementation of the identity plugin is to just return the
         argument
         """
-        self.services=kwargs['services']
-        self.worlds=kwargs['worlds']
+        self.services = kwargs['services']
+        self.worlds = kwargs['worlds']
         self.render_commands()

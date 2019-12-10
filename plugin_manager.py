@@ -1,13 +1,21 @@
-# This section is mostly based on works of Guido Diepen as seen at https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
+# This section is mostly based on works of Guido Diepen as seen at
+# https://www.guidodiepen.nl/2019/02/implementing-a-simple-plugin-framework-in-python/
 
 import pkgutil
 import os
 import inspect
 
+
 class Plugin(object):
-    def __init__(self):
+    def __init__(self, config={}):
         self.description = 'UNKNOWN'
+        self._config = config
         self.config()
+        if 'cleanup' in self._config and self._config['cleanup'] is True:
+            self.cleanup()
+
+    def cleanup(self):
+        raise NotImplementedError
 
     def config(self):
         raise NotImplementedError
@@ -17,32 +25,29 @@ class Plugin(object):
 
 
 class PluginManager(object):
-    def __init__(self, plugin_package):
+    def __init__(self, plugin_package, config):
         self.plugin_package = plugin_package
+        self.config = config
         self.reload_plugins()
-
 
     def reload_plugins(self):
         self.plugins = []
         self.seen_paths = []
         self.walk_package(self.plugin_package)
 
-
     def run_all(self, kwargs):
-        rv=[]
+        rv = []
         for plugin in self.plugins:
             rv.append(plugin.run(**kwargs))
         return rv
 
-
     def run_selected(self, enabled_plugins, **kwargs):
-        rv=[]
+        rv = []
         enabled_plugins = list(enabled_plugins)
         for plugin in self.plugins:
             if plugin.__class__.__module__.split('.')[-1] in enabled_plugins:
                 rv.append(plugin.run(**kwargs))
         return rv
-
 
     def walk_package(self, package):
         imported_package = __import__(package, fromlist=['blah'])
@@ -53,7 +58,7 @@ class PluginManager(object):
                 clsmembers = inspect.getmembers(plugin_module, inspect.isclass)
                 for (_, c) in clsmembers:
                     if issubclass(c, Plugin) & (c is not Plugin):
-                        self.plugins.append(c())
+                        self.plugins.append(c(config=self.config[pluginname.split('.')[-1]] or {}))
             all_current_paths = []
             if isinstance(imported_package.__path__, str):
                 all_current_paths.append(imported_package.__path__)

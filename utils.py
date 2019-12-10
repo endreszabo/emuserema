@@ -1,3 +1,34 @@
+from os import makedirs
+from os.path import expanduser
+from os import walk, path
+from shutil import rmtree
+from os import listdir, unlink
+
+
+def cleanup_dir(target):
+    for root, dirs, files in walk(target, topdown=False):
+        for name in dirs:
+            try:
+                pass
+                rmtree(path.join(root, name))
+            except OSError as e:
+                print("Ran into an exception during removal of %s: '%s'" % (path.join(root, name), e))
+
+
+def cleanup_files(folder):
+    for the_file in listdir(folder):
+        file_path = path.join(folder, the_file)
+        if not path.islink(file_path) and path.isfile(file_path):
+            pass
+            unlink(file_path)
+
+
+def makedir_getfd(target):
+    target = expanduser(target)
+    makedirs(target[:target.rindex('/')], exist_ok=True)
+    return open(target, 'w')
+
+
 def service_paths_to_tree(services):
     #A simple recursion will do -- they said
     #https://codegolf.stackexchange.com/a/4485
@@ -7,7 +38,8 @@ def service_paths_to_tree(services):
         tail = segs[1:]
         if not tail:
             container.append({
-                "text": "%s [%s]%s" % (service.tag, service.original_url, service.via and " (via %s)" % service.via.tag or ''),
+                "text": "%s [%s]%s" % (service.tag, service.original_url,
+                    service.via and " (via %s)" % service.via.tag or ''),
                 "type": "website",
                 "a_attr": {
                     "href": service.url
@@ -30,22 +62,23 @@ def service_paths_to_tree(services):
 
     def build_nested(paths):
         container = []
-        for path in paths:
-            build_nested_helper(path[0], path[1], container)
+        for item in paths:
+            build_nested_helper(item[0], item[1], container)
         return container
     return build_nested(services)
 
-def traverse(obj, path=None, callback=None):
-    if path is None:
-        path = []
+
+def traverse(obj, item=None, callback=None):
+    if item is None:
+        item = []
 
     if isinstance(obj, dict):
         #if '_type' in obj:
         #    return obj['_type']
-        value = {k: traverse(v, path + [k], callback)
+        value = {k: traverse(v, item + [k], callback)
                  for k, v in obj.items()}
     elif isinstance(obj, list):
-        value = [traverse(elem, path + [[]], callback)
+        value = [traverse(elem, item + [[]], callback)
                  for elem in obj]
     else:
         value = obj
@@ -53,6 +86,6 @@ def traverse(obj, path=None, callback=None):
     if callback is None:
         return value
     else:
-        return callback(path, value)
+        return callback(item, value)
 
 

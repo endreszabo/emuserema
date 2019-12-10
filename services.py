@@ -6,19 +6,19 @@ from abc import ABC, abstractmethod
 #FOR URLservice support:
 from urllib.parse import urlparse
 
+
 class AbstractService(ABC):
     def __init__(self, path=[], **kwargs):
-        self.pb=[]
+        self.pb = []
         self.tag = path[-1]
         self.world = path[0]
         self.path = path
         self.kwargs = kwargs
         #self.label="%s\t" % tag
-        self.label=""
+        self.label = ""
         self.via = None
 
         self.config()
-
 
     @abstractmethod
     def config(self):
@@ -27,6 +27,29 @@ class AbstractService(ABC):
     @abstractmethod
     def process_proxy(self, via_service, redirect_factory):
         raise NotImplementedError
+
+    def __repr__(self):
+        return("<{}({!r})>".format(self.__class__.__name__, self.tag))
+
+
+class DummyService(AbstractService):
+    def __init__(self, path=[], **kwargs):
+        self.pb = []
+        self.tag = path[-1]
+        self.world = path[0]
+        self.path = path
+        self.kwargs = kwargs
+        #self.label="%s\t" % tag
+        self.label = ""
+        self.via = None
+
+        self.config()
+
+    def config(self):
+        pass
+
+    def process_proxy(self, via_service, redirect_factory):
+        pass
 
     def __repr__(self):
         return("<{}({!r})>".format(self.__class__.__name__, self.tag))
@@ -197,6 +220,7 @@ class ServiceFactory(object):
             'ssh': SSHservice,
             'ssh_over_scb': SSHoverSCBservice,
             'url': URLservice,
+            'dummy': DummyService,
             'rdp': RDPservice,
             'vnc': VNCservice
         }

@@ -1,4 +1,4 @@
-from services import *
+from emuserema.services import *
 
 class World(object):
     """ Obsolete class, only one renderer uses it """
