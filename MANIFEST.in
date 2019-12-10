@@ -1,2 +1,8 @@
 include README.md
+include MANIFEST.in
+include LICENSE.txt
 include requirements.txt
+recursive-include emuserema/plugins/renderers *.py
+recursive-include lib *
+recursive-include bin *
+

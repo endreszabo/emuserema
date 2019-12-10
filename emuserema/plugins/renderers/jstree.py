@@ -42,6 +42,5 @@ class JsTreeRenderer(Plugin):
         """
         self.services = kwargs['services']
         self.worlds = kwargs['worlds']
-        print("JStree config: ", self._config)
         for world in self.worlds:
             self.render_jstree(self.worlds[world])
