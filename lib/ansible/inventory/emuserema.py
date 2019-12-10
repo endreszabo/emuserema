@@ -41,8 +41,6 @@ __metaclass__ = type
 from ansible.plugins.inventory import BaseInventoryPlugin, Constructable
 from sys import path
 
-path.append('/home/e/git')
-
 from emuserema import Emuserema
 
 class InventoryModule(BaseInventoryPlugin, Constructable):

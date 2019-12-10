@@ -1,7 +1,7 @@
 from setuptools import setup
 
 name = 'emuserema'
-version = '0.1'
+version = '0.1.post1'
 description = 'EMUSEREMA Multiprotocol Session and Redirect Manager'
 
 
@@ -32,6 +32,13 @@ setup(
     install_requires=[
         'ruamel.yaml',
     ],
+    scripts=[
+        'bin/viemuserema',
+        'bin/emuserema'
+    ],
+    extras_require = {
+        'ansible_inventory_plugin': ["ansible"]
+    },
     zip_safe=False
 )
 

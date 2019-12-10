@@ -21,6 +21,7 @@
 
 ## TODO
 
+- [x] Ansible Inventory plugin for realtime use
 - [ ] Support for ordered dicts which could be especially useful in HTML shortcut outputs (using ruamel RT loader that currently breaks dict item lookups)
 - [ ] Make directory structure more flexible
 - [ ] Support for inheritance of PuTTY default settings
