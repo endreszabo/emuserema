@@ -1,7 +1,7 @@
 from setuptools import setup
 
 name = 'emuserema'
-version = '0.1.post1'
+version = '0.1.post3'
 description = 'EMUSEREMA Multiprotocol Session and Redirect Manager'
 
 

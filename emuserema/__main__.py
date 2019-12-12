@@ -2,7 +2,6 @@
 
 from emuserema import Emuserema
 from sys import argv
-from IPython import embed
 
 
 def main():
@@ -11,7 +10,6 @@ def main():
         if argv[1] == '-t':
             print("Configuration parsing was successful.")
             exit(0)
-    embed()
     emuserema.render()
 
 

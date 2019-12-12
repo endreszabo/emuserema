@@ -14,7 +14,7 @@ class RDPTreeRenderer(Plugin):
     def render_rdp(self):
         for key, service in self.services.items():
             if isinstance(service, RDPservice):
-                with makedir_getfd("%s/%s/%s" % (self._config['output_dir'], '/'.join(service.path))) as dst:
+                with makedir_getfd("%s/%s.rdp" % (self._config['output_dir'], '/'.join(service.path))) as dst:
                     for key, value in service.kwargs.items():
                         if key[0] != '_':
                             print("%s:%s" % (key, value), file=dst)

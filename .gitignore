@@ -3,6 +3,7 @@ worlds/
 output/
 emuserema.yaml
 mkthrowie.sh
+Makefile
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
