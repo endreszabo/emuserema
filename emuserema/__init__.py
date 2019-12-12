@@ -13,11 +13,6 @@ from emuserema.redirects import RedirectFactory
 #from yamlloader import dump
 #from sys import stdout
 
-#CFGDIR = PREFIX + '/etc'
-#LIBDIR = PREFIX + '/local/lib/emuserema'
-#DESTINATION_HOSTS_FILE = PREFIX + '/etc/emuserema/per-destination-commands'
-#from IPython import embed
-
 
 class Emuserema(object):
     def __init__(self, definitions_directory=None):
@@ -27,17 +22,20 @@ class Emuserema(object):
         self.redirect_factory = RedirectFactory(definitions_directory=self._definitions_directory,
                 yamlloader=self.yamlloader)
         self.service_factory = ServiceFactory()
+
         self.services = {}
         self.worlds = {}
 
         self.load()
-
+        self.process()
 
 
     def __del__(self):
+        """Commit changes. For example new redirects to .redirects.yaml"""
         self.commit()
 
     def service_builder(self, path, obj):
+        """Iterate over YAML entries replacing them with objects based on those definitions."""
         if path and path[0] == 'defaults':
             return obj
         if isinstance(obj, dict):
@@ -51,6 +49,7 @@ class Emuserema(object):
         return obj
 
     def via_resolver(self, path, service):
+        """Resolve cross references between objects."""
         if path and path[0] == 'defaults':
             return service
         if isinstance(service, AbstractService):
@@ -60,6 +59,7 @@ class Emuserema(object):
         return service
 
     def create_worlds(self, path, service):
+        """Organize service object into their respective worlds."""
         if path and path[0] == 'defaults':
             return service
         if isinstance(service, AbstractService):
@@ -71,6 +71,7 @@ class Emuserema(object):
         return service
 
     def redirector(self, path, service):
+        """Process redirect dependencies"""
         if path and path[0] == 'defaults':
             return service
         if isinstance(service, AbstractService):
@@ -83,6 +84,8 @@ class Emuserema(object):
     def load(self):
         self.data = self.yamlloader.loadyaml('emuserema.yaml')
 
+    def process(self):
+        """Iterate over definitions tree a numerous times"""
         self.data = traverse(self.data, callback=self.service_builder)
         self.data = traverse(self.data, callback=self.via_resolver)
         self.data = traverse(self.data, callback=self.redirector)
@@ -104,7 +107,7 @@ class Emuserema(object):
         for service in self.services:
             service = self.services[service]
             if self.worlds[service.world] == world:
-                if isinstance(service, SSHservice) or isinstance(service, DummyService) or '_ansible_hostvars' in service.kwargs:
+                if isinstance(service, (SSHservice, DummyService)) or '_ansible_hostvars' in service.kwargs:
                     inventory.add_host(service.tag)
                     inventory.set_variable(service.tag, 'ansible_ssh_common_args',
                         '-F /home/e/.ssh/configs/%s' % service.world)

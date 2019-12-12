@@ -1,5 +1,7 @@
 # EMUSEREMA Multiprotocol Session and Redirect Manager
 
+[![Build Status](https://travis-ci.org/endreszabo/emuserema.svg?branch=master)](https://travis-ci.org/endreszabo/emuserema)
+
 ## Supported protocols
 
 - SSH
@@ -33,4 +35,3 @@
 - [ ] Use a templating engine to generate SSH configuration and HTML files
 - [ ] Tests ;)
 - [ ] Host key management
-- [x] Ansible Inventory plugin for realtime use
