@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 from os.path import expanduser
@@ -7,7 +6,7 @@ from emuserema.plugin_manager import PluginManager
 from emuserema.services import AbstractService
 from emuserema.world import World
 from emuserema.yamlloader import EmuseremaYamlLoader
-from emuserema.utils import traverse
+from emuserema.utils import traverse, get_default_directory
 from emuserema.services import *
 from emuserema.redirects import RedirectFactory
 # if yaml dumping is to be enabled:
@@ -21,8 +20,8 @@ from emuserema.redirects import RedirectFactory
 
 
 class Emuserema(object):
-    def __init__(self, definitions_directory='~/.config/emuserema'):
-        self._definitions_directory = expanduser(definitions_directory)
+    def __init__(self, definitions_directory=None):
+        self._definitions_directory = get_default_directory(definitions_directory)
 
         self.yamlloader = EmuseremaYamlLoader(self._definitions_directory)
         self.redirect_factory = RedirectFactory(definitions_directory=self._definitions_directory,
@@ -32,6 +31,8 @@ class Emuserema(object):
         self.worlds = {}
 
         self.load()
+
+
 
     def __del__(self):
         self.commit()
@@ -97,7 +98,7 @@ class Emuserema(object):
             config['plugins']['renderers']), worlds=self.worlds, services=self.services)
 
     def populate_ansible_inventory(self, inventory=None, world='default'):
-        inventory.add_host('teszt')
+        """function to populate Ansible inventory on the spot"""
 
         world = self.worlds[world]
         for service in self.services:

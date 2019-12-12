@@ -11,12 +11,24 @@ def main(args=None):
         args = argv[1:]
 
     parser = ArgumentParser()
+    parser.add_argument("-c", "--config-dir",
+            help="Directory of configurations", type=str)
+    parser.add_argument("-i", "--init",
+            help="Make initial configurations",
+            action="store_true")
     parser.add_argument("-t", "--test",
             help="Only test configurations and exit.",
             action="store_true")
     args = parser.parse_args()
 
-    emuserema = Emuserema()
+    if args.init:
+        from emuserema.utils import generate_initial_config
+        generate_initial_config(args.config_dir)
+        exit(0)
+
+    emuserema = Emuserema(
+        definitions_directory=args.config_dir
+    )
 
     if args.test:
         print("Configuration parsing was successful.")

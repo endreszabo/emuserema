@@ -89,3 +89,79 @@ def traverse(obj, item=None, callback=None):
         return callback(item, value)
 
 
+def get_default_directory(directory='~/.config/emuserema'):
+    from os import environ, getuid
+    if 'VIRTUAL_ENV' in environ:
+        return environ['VIRTUAL_ENV']+'/etc/emuserema'
+    if getuid() == 0:
+        return '/etc/emuserema'
+    if directory is None:
+        raise ValueError('destination directory can not be empty')
+    return expanduser(directory)
+
+
+def generate_initial_config(target):
+    target = get_default_directory(target)
+    makedirs(target, exist_ok=True)
+    with open(target+'/config.yaml', 'w') as config:
+        print("""
+plugins:
+  renderers:
+    openssh:
+      enabled: True
+      output_dir: ~/.ssh/configs
+    putty:
+      enabled: False
+      output_dir: ~/Documents/SSH
+      one_registry_file_per_world: True
+    wssh_commands:
+      enabled: False
+      output_file: ~/.config/emuserema/.wssh_commands
+    realvnc:
+      enabled: False
+      output_dir: ~/.vnc/VNCAddressBook
+      clear_dir: True
+    jstree:
+      enabled: False
+      output_dir: ~/htdocs
+    mstsc:
+      enabled: False
+      output_dir: ~/Documents/RDP
+""", file = config)
+
+    with open(target+'/emuserema.yaml', 'w') as default_emuserema:
+        print("""
+---
+defaults:
+  all: &defaults
+    ControlMaster: auto
+    ControlPersist: 0
+    ControlPath: ~/.ssh/masters/%r@%n:%p.global
+    UserKnownHostsFile: ~/.ssh/hosts/global
+    Protocol: 2
+    ServerAliveInterval: 15
+    ServerAliveCountMax: 3
+    TCPKeepAlive: yes
+    User: root
+    HashKnownHosts: no
+    VisualHostKey: no
+    ForwardAgent: yes
+    _hostkeyalias: True
+    _type: ssh
+    Port: 22
+  defaults-myuser: &defaults-myuser
+    <<: *defaults
+    User: myuser
+  oldgear: &oldgear
+    KexAlgorithms: diffie-hellman-group1-sha1
+    Ciphers: aes256-cbc
+  reallyoldgear: &reallyoldgear
+    <<: *oldgear
+    HostKeyAlgorithms: ssh-dss
+""", file = default_emuserema)
+
+    with open(target+'/.redirects.yaml', 'w') as redirects:
+        print("""
+bindip: 127.0.0.1
+counter: 38000
+""", file = redirects)
