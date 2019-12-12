@@ -1,7 +1,7 @@
 from setuptools import setup
 
 name = 'emuserema'
-version = '0.1.post3'
+version = '0.1.post4'
 description = 'EMUSEREMA Multiprotocol Session and Redirect Manager'
 
 
@@ -34,10 +34,14 @@ setup(
     ],
     scripts=[
         'bin/viemuserema',
-        'bin/emuserema'
     ],
     extras_require = {
         'ansible_inventory_plugin': ["ansible"]
+    },
+    entry_points={
+        'console_scripts': [
+            'emuserema = emuserema.__main__:main'
+        ]
     },
     zip_safe=False
 )
