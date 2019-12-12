@@ -2,14 +2,26 @@
 
 from emuserema import Emuserema
 from sys import argv
+from argparse import ArgumentParser
 
 
-def main():
+def main(args=None):
+    """Main entry point."""
+    if args is None:
+        args = argv[1:]
+
+    parser = ArgumentParser()
+    parser.add_argument("-t", "--test",
+            help="Only test configurations and exit.",
+            action="store_true")
+    args = parser.parse_args()
+
     emuserema = Emuserema()
-    if len(argv) > 1:
-        if argv[1] == '-t':
-            print("Configuration parsing was successful.")
-            exit(0)
+
+    if args.test:
+        print("Configuration parsing was successful.")
+        exit(0)
+
     emuserema.render()
 
 
