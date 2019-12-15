@@ -89,14 +89,14 @@ def traverse(obj, item=None, callback=None):
         return callback(item, value)
 
 
-def get_default_directory(directory='~/.config/emuserema'):
+def get_default_directory(directory=None):
     from os import environ, getuid
     if 'VIRTUAL_ENV' in environ:
         return environ['VIRTUAL_ENV']+'/etc/emuserema'
     if getuid() == 0:
         return '/etc/emuserema'
     if directory is None:
-        raise ValueError('destination directory can not be empty')
+        directory = '~/.config/emuserema'
     return expanduser(directory)
 
 
