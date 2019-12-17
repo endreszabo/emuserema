@@ -3,6 +3,7 @@ include MANIFEST.in
 include LICENSE.txt
 include requirements.txt
 recursive-include emuserema/plugins/renderers *.py
+recursive-include emuserema/templates */*
 recursive-include lib *
 recursive-include bin *
 

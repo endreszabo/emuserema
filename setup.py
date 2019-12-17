@@ -30,6 +30,9 @@ setup(
     license='GPLv2',
     packages=['emuserema'],
     include_package_data=True,
+    package_data = {
+        'emuserema': ['templates/*']
+    },
     install_requires=[
         'ruamel.yaml',
     ],

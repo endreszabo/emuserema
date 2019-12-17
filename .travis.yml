@@ -8,3 +8,7 @@ install:
 script:
   - python emuserema/__main__.py --init
   - python emuserema/__main__.py --test
+notifications:
+  email: false
+  irc: "chat.freenode.net#emuserema"
+

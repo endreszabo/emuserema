@@ -1,5 +1,5 @@
 from os import makedirs
-from os.path import expanduser
+from os.path import expanduser, dirname, abspath, join as pathjoin, isfile
 from os import walk, path
 from shutil import rmtree
 from os import listdir, unlink
@@ -165,3 +165,9 @@ defaults:
 bindip: 127.0.0.1
 counter: 38000
 """, file = redirects)
+
+def get_template(module: str, name: str):
+    if isfile(pathjoin(get_default_directory(), 'templates', module, name)):
+        return pathjoin(get_default_directory(), 'templates', module, name)
+    return pathjoin(dirname(abspath(__file__)), 'templates', module, name)
+ 
