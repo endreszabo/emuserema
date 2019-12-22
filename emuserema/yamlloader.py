@@ -3,6 +3,8 @@
 #from ruamel.std.pathlib import Path
 #from ruamel.yaml import YAML, version_info, dump, YAMLError, SafeLoader, RoundTripLoader
 from ruamel.yaml import YAML, YAMLError, dump, SafeLoader
+from os.path import isfile
+from jinja2 import Template, FileSystemLoader, Environment
 
 
 class EmuseremaRelativeSafeLoader(SafeLoader):
@@ -28,6 +30,8 @@ class EmuseremaYamlLoader(object):
         self.yaml = YAML(typ='safe', pure=True)
         self.yaml.default_flow_style = False
 
+        self.jinja_env = Environment(loader=FileSystemLoader(searchpath=self._definitions_directory, followlinks=True))
+
         def my_compose_document(self):
             self.parser.get_event()
             node = self.compose_node(None, None)
@@ -44,13 +48,19 @@ class EmuseremaYamlLoader(object):
 
     def loadyaml(self, filename):
         yamldata = None
-        with open(self._definitions_directory + '/' + filename, 'r') as stream:
-            try:
-                yamldata = self.yaml.load(stream)
-        #        print(dump(t, default_flow_style=False))
-        #        print type(t)
-            except YAMLError as exc:
-                print(exc)
+        path = self._definitions_directory + '/' + filename
+        if isfile(path + '.j2'):
+            templatedata = self.loadyaml(filename + '.j2.yaml')
+            template = self.jinja_env.get_template(filename + '.j2')
+            yamldata = self.yaml.load(template.render(templatedata))
+        else:
+            with open(path, 'r') as stream:
+                try:
+                    yamldata = self.yaml.load(stream)
+            #        print(dump(t, default_flow_style=False))
+            #        print type(t)
+                except YAMLError as exc:
+                    print(exc)
 
         if not yamldata:
             print(yamldata)

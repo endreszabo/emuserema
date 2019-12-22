@@ -19,6 +19,9 @@ def main(args=None):
     parser.add_argument("-t", "--test",
             help="Only test configurations and exit.",
             action="store_true")
+    parser.add_argument("-d", "--dump",
+            help="Dump parsed world configuration YAML.",
+            action="store_true")
     args = parser.parse_args()
 
     if args.init:
@@ -30,6 +33,8 @@ def main(args=None):
         definitions_directory=args.config_dir
     )
 
+    if args.dump:
+        emuserema.dump()
     if args.test:
         print("Configuration parsing was successful.")
         exit(0)

@@ -5,13 +5,12 @@ from sys import exit, argv
 from emuserema.plugin_manager import PluginManager
 from emuserema.services import AbstractService
 from emuserema.world import World
-from emuserema.yamlloader import EmuseremaYamlLoader
+from emuserema.yamlloader import EmuseremaYamlLoader, dump
 from emuserema.utils import traverse, get_default_directory
 from emuserema.services import *
 from emuserema.redirects import RedirectFactory
 # if yaml dumping is to be enabled:
-#from yamlloader import dump
-#from sys import stdout
+from sys import stdout
 
 
 class Emuserema(object):
@@ -90,7 +89,9 @@ class Emuserema(object):
         self.data = traverse(self.data, callback=self.via_resolver)
         self.data = traverse(self.data, callback=self.redirector)
         self.data = traverse(self.data, callback=self.create_worlds)
-        #dump(self.data, stdout, default_flow_style=False)
+
+    def dump(self):
+        dump(self.data, stdout, default_flow_style=False)
 
     def render(self):
         config = self.yamlloader.loadyaml('config.yaml')
