@@ -35,6 +35,7 @@ setup(
     },
     install_requires=[
         'ruamel.yaml',
+        'jinja2',
     ],
     scripts=[
         'bin/viemuserema',
