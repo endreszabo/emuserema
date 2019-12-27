@@ -123,6 +123,8 @@ class Emuserema(object):
                             group = group.lower().replace(' ', '_')
                             group = inventory.add_group(group)
                             inventory.add_child(group, service.tag)
+                    group = inventory.add_group('class_%s' % service.__class__.__name__)
+                    inventory.add_child(group, service.tag)
                     for group in service.path[1:-1] + ['emuserema_' + '__'.join(service.path[1:-1])]:
                         group = group.lower().replace(' ', '_')
                         group = inventory.add_group(group)

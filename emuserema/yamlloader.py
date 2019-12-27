@@ -4,7 +4,7 @@
 #from ruamel.yaml import YAML, version_info, dump, YAMLError, SafeLoader, RoundTripLoader
 from ruamel.yaml import YAML, YAMLError, dump, SafeLoader
 from os.path import isfile
-from jinja2 import Template, FileSystemLoader, Environment
+from jinja2 import Template, ChoiceLoader, PackageLoader, FileSystemLoader, Environment
 
 
 class EmuseremaRelativeSafeLoader(SafeLoader):
@@ -30,7 +30,10 @@ class EmuseremaYamlLoader(object):
         self.yaml = YAML(typ='safe', pure=True)
         self.yaml.default_flow_style = False
 
-        self.jinja_env = Environment(loader=FileSystemLoader(searchpath=self._definitions_directory, followlinks=True))
+        self.jinja_env = Environment(loader=ChoiceLoader([
+            PackageLoader('emuserema'),
+            FileSystemLoader(searchpath=self._definitions_directory, followlinks=True)
+        ]))
 
         def my_compose_document(self):
             self.parser.get_event()
