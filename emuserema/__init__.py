@@ -5,7 +5,8 @@ from sys import exit, argv
 from emuserema.plugin_manager import PluginManager
 from emuserema.services import AbstractService
 from emuserema.world import World
-from emuserema.yamlloader import EmuseremaYamlLoader, dump
+from emuserema.yamlloader import EmuseremaYamlLoader
+from ruamel.yaml import dump
 from emuserema.utils import traverse, get_default_directory
 from emuserema.services import *
 from emuserema.redirects import RedirectFactory
