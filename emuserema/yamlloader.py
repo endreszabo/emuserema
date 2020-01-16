@@ -35,7 +35,7 @@ class EmuseremaYamlLoader(object):
         if ruamel.yaml.version_info < (0, 15):
             self.yaml = ruamel.yaml
         else:
-            self.yaml = YAML(typ='safe', pure=True)
+            self.yaml = ruamel.yaml.YAML(typ='safe', pure=True)
             self.yaml.default_flow_style = False
 
         self.jinja_env = Environment(loader=ChoiceLoader([
@@ -80,7 +80,10 @@ class EmuseremaYamlLoader(object):
         else:
             with open(path, 'r') as stream:
                 try:
-                    yamldata = self.yaml.load(stream, Loader=ruamel.yaml.Loader)
+                    if ruamel.yaml.version_info < (0, 15):
+                        yamldata = self.yaml.load(stream, Loader=ruamel.yaml.Loader)
+                    else:
+                        yamldata = self.yaml.load(stream)
             #        print(dump(t, default_flow_style=False))
             #        print type(t)
                 except ruamel.yaml.YAMLError as exc:
