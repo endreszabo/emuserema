@@ -1,0 +1,6 @@
+install_test:
+  tags:
+    - unixops
+  script:
+    - python3 setup.py install --user
+    - emuserema -t
