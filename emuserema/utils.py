@@ -4,6 +4,8 @@ from os import walk, path
 from shutil import rmtree
 from os import listdir, unlink
 
+from __future__ import print_function
+
 
 def cleanup_dir(target):
     for root, dirs, files in walk(target, topdown=False):
@@ -166,7 +168,7 @@ bindip: 127.0.0.1
 counter: 38000
 """, file = redirects)
 
-def get_template(module: str, name: str):
+def get_template(module, name):
     if isfile(pathjoin(get_default_directory(), 'templates', module, name)):
         return pathjoin(get_default_directory(), 'templates', module, name)
     return pathjoin(dirname(abspath(__file__)), 'templates', module, name)

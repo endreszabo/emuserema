@@ -1,10 +1,12 @@
 
 USE_PANGO_TAGS=1
 STAGE3_PATH='~/bin/emuserema-ssh-wrapper.sh'
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
 #FOR URLservice support:
 from urllib.parse import urlparse
+
+ABC = ABCMeta('ABC', (object,), {'__slots__': ()})
 
 
 class AbstractService(ABC):
