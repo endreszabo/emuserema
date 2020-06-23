@@ -6,6 +6,7 @@
 import ruamel.yaml
 from os.path import isfile
 from jinja2 import Template, ChoiceLoader, PackageLoader, FileSystemLoader, Environment
+from os import environ, uname
 
 
 class EmuseremaRelativeSafeLoader(ruamel.yaml.SafeLoader):
@@ -75,6 +76,10 @@ class EmuseremaYamlLoader(object):
         path = self._definitions_directory + '/' + filename
         if isfile(path + '.j2'):
             templatedata = self.loadyaml(filename + '.j2.yaml')
+            templatedata['_environ'] = dict(environ)
+            if 'HOSTNAME' not in templatedata['_environ']:
+                uname_result = uname()
+                templatedata['_environ']['HOSTNAME'] = uname_result.nodename
             template = self.jinja_env.get_template(filename + '.j2')
             yamldata = self.yaml.load(template.render(templatedata))
         else:

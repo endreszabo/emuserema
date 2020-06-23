@@ -112,7 +112,7 @@ class Emuserema(object):
                 if isinstance(service, (SSHservice, DummyService)) or '_ansible_hostvars' in service.kwargs:
                     inventory.add_host(service.tag)
                     inventory.set_variable(service.tag, 'ansible_ssh_common_args',
-                        '-F /home/e/.ssh/configs/%s' % service.world)
+                        '-F ~/.ssh/configs/%s' % service.world)
                     #we must fix this somehow
                     #inventory.set_variable(service.tag, 'ansible_ssh_executable',
                     #    'SSH_AUTH_SOCK=/home/e/.ssh/agents/%s /usr/bin/ssh' % service.world)
