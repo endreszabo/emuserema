@@ -4,7 +4,7 @@ from os import walk, path
 from shutil import rmtree
 from os import listdir, unlink
 
-from __future__ import print_function
+#from __future__ import print_function
 
 
 def cleanup_dir(target):
