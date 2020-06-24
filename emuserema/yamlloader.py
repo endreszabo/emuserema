@@ -13,12 +13,36 @@ class EmuseremaRelativeSafeLoader(ruamel.yaml.SafeLoader):
     def __init__(self, definitions_directory=None):
         self._definitions_directory = definitions_directory
 
+        if ruamel.yaml.version_info < (0, 15):
+            self.yaml = ruamel.yaml
+        else:
+            self.yaml = ruamel.yaml.YAML(typ='safe', pure=True)
+            self.yaml.default_flow_style = False
+        self.jinja_env = Environment(loader=ChoiceLoader([
+            PackageLoader('emuserema'),
+            FileSystemLoader(searchpath=self._definitions_directory, followlinks=True)
+        ]))
+
     def construct_python_tuple(self, cons, node):
         return tuple(cons.construct_sequence(node))
 
     # adapted from http://code.activestate.com/recipes/577613-yaml-include-support/
     def yaml_include(self, cons, node):
-        with open(self._definitions_directory + '/' + node.value, 'r') as infile:
+        path =  node.value
+        if isfile(self._definitions_directory + '/' +path + '.j2'):
+            templatedata = self.loadyaml(path + '.j2.yaml')
+            if not templatedata:
+                templatedata = {}
+            templatedata['_environ'] = dict(environ)
+            if 'HOSTNAME' not in templatedata['_environ']:
+                uname_result = uname()
+                templatedata['_environ']['HOSTNAME'] = uname_result.nodename
+            template = self.jinja_env.get_template(path + '.j2')
+            y = cons.loader
+            yaml = ruamel.yaml.YAML(typ=y.typ, pure=y.pure)
+            yaml.composer.anchors = cons.composer.anchors
+            return yaml.load(template.render(templatedata))
+        with open(self._definitions_directory + '/' +path, 'r') as infile:
             if ruamel.yaml.version_info < (0, 15):
                 #yaml.composer.anchors = cons.composer.anchors
                 return ruamel.yaml.safe_load(infile)
@@ -28,6 +52,30 @@ class EmuseremaRelativeSafeLoader(ruamel.yaml.SafeLoader):
                 yaml.composer.anchors = cons.composer.anchors
                 return yaml.load(infile)
 
+    def loadyaml(self, filename):
+        yamldata = None
+        path = self._definitions_directory + '/' + filename
+        if isfile(path + '.j2'):
+            templatedata = self.loadyaml(filename + '.j2.yaml')
+            templatedata['_environ'] = dict(environ)
+            if 'HOSTNAME' not in templatedata['_environ']:
+                uname_result = uname()
+                templatedata['_environ']['HOSTNAME'] = uname_result.nodename
+            template = self.jinja_env.get_template(self._definitions_directory + '/' + filename + '.j2')
+            yamldata = self.yaml.load(template.render(templatedata))
+        else:
+            with open(path, 'r') as stream:
+                try:
+                    if ruamel.yaml.version_info < (0, 15):
+                        yamldata = self.yaml.load(stream, Loader=ruamel.yaml.Loader)
+                    else:
+                        yamldata = self.yaml.load(stream)
+            #        print(dump(t, default_flow_style=False))
+            #        print type(t)
+                except ruamel.yaml.YAMLError as exc:
+                    print(exc)
+
+        return yamldata
 
 class EmuseremaYamlLoader(object):
     def __init__(self, definitions_directory=None):
