@@ -30,6 +30,9 @@ class AbstractService(ABC):
     def process_proxy(self, via_service, redirect_factory):
         raise NotImplementedError
 
+    def get(self, key):
+        return(self.kwargs.get(key))
+
     def __repr__(self):
         return("<{}({!r})>".format(self.__class__.__name__, self.tag))
 

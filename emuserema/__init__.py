@@ -102,8 +102,44 @@ class Emuserema(object):
         renderer_plugins.run_selected(filter(lambda name: config['plugins']['renderers'][name]['enabled'] is True,
             config['plugins']['renderers']), worlds=self.worlds, services=self.services)
 
+
     def populate_ansible_inventory(self, inventory=None, world='default'):
         """function to populate Ansible inventory on the spot"""
+
+        def get_ansible_treevars(data, data_path):
+            """Acquires the _ansible_treevars items from the main data dict"""
+            if len(data_path) > 1:
+                yield from get_ansible_treevars(data[data_path[0]], data_path[1:])
+            #elif isinstance(data.get(data_path[0]), dict):
+            yield data.get(data_path[0]).get('_ansible_treevars')
+
+        def inherit(ansible_treevars_items):
+            """Renders the actual inheritance that it gets back from get_ansible_treevars()"""
+            retval_dict = dict()
+            for ansible_treevars_item in ansible_treevars_items:
+                #a leaf with a value
+                if ansible_treevars_item:
+                    print('item', ansible_treevars_item)
+                    for ansible_treevars_dict in ansible_treevars_item:
+                        for key, value in ansible_treevars_dict.items():
+                            if isinstance(value, str):
+                                if key not in retval_dict:
+                                    retval_dict[key] = [value]
+                                else:
+                                    retval_dict[key].append(value)
+                                    #retval_dict[key].insert(0, value)
+                            elif isinstance(value, int):
+                                if key not in retval_dict:
+                                    retval_dict[key] = [str(value)]
+                                else:
+                                    retval_dict[key].append(str(value))
+                                    #retval_dict[key].insert(0, value)
+                            else:
+                                raise NotImplementedError(
+                                    '_ansible_treevars item with a type of %s is unsupported.' % type(value))
+            print('treevars items:', retval_dict)
+            for key, value in retval_dict.items():
+                yield [key, value]
 
         world = self.worlds[world]
         for service in self.services:
@@ -116,6 +152,10 @@ class Emuserema(object):
                     #we must fix this somehow
                     #inventory.set_variable(service.tag, 'ansible_ssh_executable',
                     #    'SSH_AUTH_SOCK=/home/e/.ssh/agents/%s /usr/bin/ssh' % service.world)
+                    # iterate over the data tree to get _ansible_treevars items
+                    for key, value in inherit(get_ansible_treevars(self.data, service.path)):
+                        print("setting treevars variable", key, value)
+                        inventory.set_variable(service.tag, key, value)
                     if '_ansible_hostvars' in service.kwargs:
                         for key, value in service.kwargs['_ansible_hostvars'].items():
                             inventory.set_variable(service.tag, key, value)
