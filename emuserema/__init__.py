@@ -134,6 +134,13 @@ class Emuserema(object):
                                 else:
                                     retval_dict[key].append(str(value))
                                     #retval_dict[key].insert(0, value)
+                            #currently we're only appending the list items, no nested lists are supported yet
+                            elif isinstance(value, list):
+                                if key not in retval_dict:
+                                    retval_dict[key] = value
+                                else:
+                                    retval_dict[key] + value
+                                    #retval_dict[key].insert(0, value)
                             else:
                                 raise NotImplementedError(
                                     '_ansible_treevars item with a type of %s is unsupported.' % type(value))
@@ -147,15 +154,27 @@ class Emuserema(object):
             if self.worlds[service.world] == world:
                 if isinstance(service, (SSHservice, DummyService)) or '_ansible_hostvars' in service.kwargs:
                     inventory.add_host(service.tag)
-                    inventory.set_variable(service.tag, 'ansible_ssh_common_args',
-                        '-F ~/.ssh/configs/%s' % service.world)
+                    #jinventory.set_variable(service.tag, 'ansible_ssh_common_args',
+                    #    '-F ~/.ssh/configs/%s' % service.world)
                     #we must fix this somehow
                     #inventory.set_variable(service.tag, 'ansible_ssh_executable',
                     #    'SSH_AUTH_SOCK=/home/e/.ssh/agents/%s /usr/bin/ssh' % service.world)
+
                     # iterate over the data tree to get _ansible_treevars items
                     for key, value in inherit(get_ansible_treevars(self.data, service.path)):
                         print("setting treevars variable", key, value)
-                        inventory.set_variable(service.tag, key, value)
+                        #extra group memberships based on treevars
+                        if key == '_ansible_groups':
+                            for group in value:
+                                group = group.lower().replace(' ', '_')
+                                group = inventory.add_group(group)
+                                inventory.add_child(group, service.tag)
+                        else:
+                            #if this is a single-item-list then add the item itself
+                            if isinstance(value, list) and len(value) == 1:
+                                inventory.set_variable(service.tag, key, value[0])
+                            else:
+                                inventory.set_variable(service.tag, key, value)
                     if '_ansible_hostvars' in service.kwargs:
                         for key, value in service.kwargs['_ansible_hostvars'].items():
                             inventory.set_variable(service.tag, key, value)
@@ -164,6 +183,7 @@ class Emuserema(object):
                             group = group.lower().replace(' ', '_')
                             group = inventory.add_group(group)
                             inventory.add_child(group, service.tag)
+                    #add one extra group with the service class name
                     group = inventory.add_group('class_%s' % service.__class__.__name__)
                     inventory.add_child(group, service.tag)
                     for group in service.path[1:-1] + ['emuserema_' + '__'.join(service.path[1:-1])]:
