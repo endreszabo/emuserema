@@ -1,0 +1,11 @@
+# Services for world {{world.name}}
+{% for service in services %}
+###
+### {{ service.tag }}
+###
+
+Host {{ service.tag }}
+{%-for pb in service.pb%}
+{{pb-}}
+{% endfor %}
+{% endfor %}

@@ -59,6 +59,12 @@ class DummyService(AbstractService):
     def __repr__(self):
         return("<{}({!r})>".format(self.__class__.__name__, self.tag))
 
+class SSHserviceAttribute(object):
+    def __init__(key, value, comment):
+        self.key=key
+        self.value=value
+        self.comment=comment
+
 
 class SSHservice(AbstractService):
 
