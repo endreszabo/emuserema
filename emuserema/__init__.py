@@ -3,16 +3,33 @@
 from os.path import expanduser
 from sys import exit, argv
 from emuserema.plugin_manager import PluginManager
-from emuserema.services import AbstractService
+from emuserema.services import AbstractService, SSHservice
 from emuserema.world import World
 from emuserema.yamlloader import EmuseremaYamlLoader
 from ruamel.yaml import dump
-from emuserema.utils import traverse, get_default_directory
+from emuserema.utils import traverse, get_default_directory, get_ansible_treevars, inherit
 from emuserema.services import *
 from emuserema.redirects import RedirectFactory
 # if yaml dumping is to be enabled:
 from sys import stdout
+import logging
+# create log
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to log
+log.addHandler(ch)
+log.debug("Emuserema starting")
 
 class Emuserema(object):
     def __init__(self, definitions_directory=None):
@@ -26,13 +43,12 @@ class Emuserema(object):
         self.services = {}
         self.worlds = {}
 
+        log.debug("Loading source data")
         self.load()
+        log.debug("Processing loaded data")
         self.process()
 
 
-    def __del__(self):
-        """Commit changes. For example new redirects to .redirects.yaml"""
-        self.commit()
 
     def service_builder(self, path, obj):
         """Iterate over YAML entries replacing them with objects based on those definitions."""
@@ -41,7 +57,11 @@ class Emuserema(object):
         if isinstance(obj, dict):
             if '_type' in obj:
                 if self.service_factory.supported(obj):
-                    service = self.service_factory.create(path, **obj)
+                    service = self.service_factory.create(
+                        path = path,
+                        kwargs = obj,
+                        emuserema = self
+                    )
                     self.services[service.tag] = service
                     return service
                 else:
@@ -86,67 +106,66 @@ class Emuserema(object):
 
     def process(self):
         """Iterate over definitions tree a numerous times"""
+        log.debug("Iterating data tree to build services")
         self.data = traverse(self.data, callback=self.service_builder)
+        log.debug("Iterating data tree to build service dependency tree")
         self.data = traverse(self.data, callback=self.via_resolver)
+        log.debug("Iterating data tree to create redirector rules")
         self.data = traverse(self.data, callback=self.redirector)
+        log.debug("Iterating data tree to create final worlds")
         self.data = traverse(self.data, callback=self.create_worlds)
 
     def dump(self):
         dump(self.data, stdout, default_flow_style=False)
+
+    def jsonServiceItemRenderer(self, service):
+        print(repr(service))
+        if isinstance(service, SSHservice):
+            kw = {
+                "name": service.tag,
+                "path": service.path,
+                "address": None,
+                "metadata": {},
+                "ansible": {
+                    "groups": [],
+                    "hostvars": {}
+                }
+            }
+            if 'HostName' in service.kwargs:
+                kw["address"] = service.kwargs['HostName']
+            if "_ansible_groups" in service.kwargs:
+                kw['ansible']['groups'] = service.kwargs['_ansible_groups']
+            if "_ansible_hostvars" in service.kwargs:
+                kw['ansible']['hostvars'] = service.kwargs['_ansible_hostvars']
+            if '_metadata' in service.kwargs:
+                kw['metadata'] = service.kwargs['_metadata']
+            return kw
+        return None
+
+    def jsondump(self):
+        import json
+        ja = []
+        for service in self.services:
+            if result := self.jsonServiceItemRenderer(self.services[service]):
+                ja.append(result)
+        print(json.dumps(ja))
 
     def render(self):
         config = self.yamlloader.loadyaml('config.yaml')
 
         renderer_plugins = PluginManager('emuserema.plugins.renderers', config=config['plugins']['renderers'])
 
-        renderer_plugins.run_selected(filter(lambda name: config['plugins']['renderers'][name]['enabled'] is True,
-            config['plugins']['renderers']), worlds=self.worlds, services=self.services)
-
+        renderer_plugins.run_selected(
+            filter(
+                lambda name: config['plugins']['renderers'][name]['enabled'] is True,
+                config['plugins']['renderers']
+            ),
+            worlds=self.worlds, services=self.services, emuserema=self
+        )
 
     def populate_ansible_inventory(self, inventory=None, world='default'):
         """function to populate Ansible inventory on the spot"""
 
-        def get_ansible_treevars(data, data_path):
-            """Acquires the _ansible_treevars items from the main data dict"""
-            if len(data_path) > 1:
-                yield from get_ansible_treevars(data[data_path[0]], data_path[1:])
-            #elif isinstance(data.get(data_path[0]), dict):
-            yield data.get(data_path[0]).get('_ansible_treevars')
-
-        def inherit(ansible_treevars_items):
-            """Renders the actual inheritance that it gets back from get_ansible_treevars()"""
-            retval_dict = dict()
-            for ansible_treevars_item in ansible_treevars_items:
-                #a leaf with a value
-                if ansible_treevars_item:
-                    print('item', ansible_treevars_item)
-                    for ansible_treevars_dict in ansible_treevars_item:
-                        for key, value in ansible_treevars_dict.items():
-                            if isinstance(value, str):
-                                if key not in retval_dict:
-                                    retval_dict[key] = [value]
-                                else:
-                                    retval_dict[key].append(value)
-                                    #retval_dict[key].insert(0, value)
-                            elif isinstance(value, int):
-                                if key not in retval_dict:
-                                    retval_dict[key] = [str(value)]
-                                else:
-                                    retval_dict[key].append(str(value))
-                                    #retval_dict[key].insert(0, value)
-                            #currently we're only appending the list items, no nested lists are supported yet
-                            elif isinstance(value, list):
-                                if key not in retval_dict:
-                                    retval_dict[key] = value
-                                else:
-                                    retval_dict[key] + value
-                                    #retval_dict[key].insert(0, value)
-                            else:
-                                raise NotImplementedError(
-                                    '_ansible_treevars item with a type of %s is unsupported.' % type(value))
-            print('treevars items:', retval_dict)
-            for key, value in retval_dict.items():
-                yield [key, value]
 
         world = self.worlds[world]
         for service in self.services:
@@ -161,8 +180,7 @@ class Emuserema(object):
                     #    'SSH_AUTH_SOCK=/home/e/.ssh/agents/%s /usr/bin/ssh' % service.world)
 
                     # iterate over the data tree to get _ansible_treevars items
-                    for key, value in inherit(get_ansible_treevars(self.data, service.path)):
-                        print("setting treevars variable", key, value)
+                    for key, value in inherit(get_ansible_treevars(self.data, service.path)).items():
                         #extra group memberships based on treevars
                         if key == '_ansible_groups':
                             for group in value:
@@ -175,14 +193,17 @@ class Emuserema(object):
                                 inventory.set_variable(service.tag, key, value[0])
                             else:
                                 inventory.set_variable(service.tag, key, value)
-                    if '_ansible_hostvars' in service.kwargs:
-                        for key, value in service.kwargs['_ansible_hostvars'].items():
-                            inventory.set_variable(service.tag, key, value)
-                    if '_ansible_groups' in service.kwargs:
-                        for group in service.kwargs['_ansible_groups']:
-                            group = group.lower().replace(' ', '_')
-                            group = inventory.add_group(group)
-                            inventory.add_child(group, service.tag)
+                    for key, value in service.kwargs.items():
+                        if key == '_ansible_hostvars':
+                            for key, value in service.kwargs['_ansible_hostvars'].items():
+                                inventory.set_variable(service.tag, key, value)
+                        elif key == '_ansible_groups':
+                            for group in service.kwargs['_ansible_groups']:
+                                group = group.lower().replace(' ', '_')
+                                group = inventory.add_group(group)
+                                inventory.add_child(group, service.tag)
+                        else:
+                            inventory.set_variable(service.tag, 'emuserema_kwarg_'+key, value)
                     #add one extra group with the service class name
                     group = inventory.add_group('class_%s' % service.__class__.__name__)
                     inventory.add_child(group, service.tag)
@@ -190,21 +211,29 @@ class Emuserema(object):
                         group = group.lower().replace(' ', '_')
                         group = inventory.add_group(group)
                         inventory.add_child(group, service.tag)
+                    if 'rw' not in service.path:
+                        group = inventory.add_group('__'.join(['nodename_stub', service.tag.split('.')[0]]))
+                        inventory.add_child(group, service.tag)
+
 #        embed()
         pass
 
     def commit(self):
+        """Commit changes. For example new redirects to .redirects.yaml"""
         self.redirect_factory.commit()
 
 
-def main():
-    emuserema = Emuserema()
-    if len(argv) > 1:
-        if argv[1] == '-t':
-            print("Configuration parsing was successful.")
-            exit(0)
-    emuserema.render()
-
-
-if __name__ == '__main__':
-    main()
+##def main():
+##    setup_logger()
+##    emuserema = Emuserema()
+##    if len(argv) > 1:
+##        if argv[1] == '-t':
+##            print("Configuration parsing was successful.")
+##            exit(0)
+##    emuserema.render()
+##    emuserema.commit()
+##
+##
+##if __name__ == '__main__':
+##    main()
+##

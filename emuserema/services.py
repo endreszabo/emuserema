@@ -5,12 +5,15 @@ from abc import ABCMeta, abstractmethod
 
 #FOR URLservice support:
 from urllib.parse import urlparse
+from emuserema.utils import get_ansible_treevars, inherit, y7address
 
 ABC = ABCMeta('ABC', (object,), {'__slots__': ()})
 
+import logging
+log = logging.getLogger(__name__)
 
 class AbstractService(ABC):
-    def __init__(self, path=[], **kwargs):
+    def __init__(self, path=[], kwargs={}, treevars=[]):
         self.pb = []
         self.tag = path[-1]
         self.world = path[0]
@@ -19,6 +22,7 @@ class AbstractService(ABC):
         #self.label="%s\t" % tag
         self.label = ""
         self.via = None
+        self.treevars = treevars
 
         self.config()
 
@@ -38,7 +42,7 @@ class AbstractService(ABC):
 
 
 class DummyService(AbstractService):
-    def __init__(self, path=[], **kwargs):
+    def __init__(self, path=[], kwargs={}, treevars=[]):
         self.pb = []
         self.tag = path[-1]
         self.world = path[0]
@@ -47,10 +51,13 @@ class DummyService(AbstractService):
         #self.label="%s\t" % tag
         self.label = ""
         self.via = None
+        self.treevars = treevars
 
         self.config()
 
     def config(self):
+        if 'domain_item' in self.treevars and self.tag[-1] != '.':
+            self.tag = ".".join([self.tag] + self.treevars['domain_item'])
         pass
 
     def process_proxy(self, via_service, redirect_factory):
@@ -59,8 +66,9 @@ class DummyService(AbstractService):
     def __repr__(self):
         return("<{}({!r})>".format(self.__class__.__name__, self.tag))
 
+
 class SSHserviceAttribute(object):
-    def __init__(key, value, comment):
+    def __init__(self, key, value, comment):
         self.key=key
         self.value=value
         self.comment=comment
@@ -91,15 +99,32 @@ class SSHservice(AbstractService):
             'dynamic': {}
         }
 
+        if 'domain_item' in self.treevars and self.tag[-1]!='.':
+            self.tag = ".".join([self.tag]+self.treevars['domain_item'])
+
+        #IP address or hostname was not specified in YAML, we add one
         if 'hostname' not in map(lambda x: x.lower(), self.kwargs.keys()):
-            self.kwargs['HostName'] = self.tag
+            if 'site_id' in self.treevars and '_ipoffset' in self.kwargs:
+                log.debug("adding default hostname for y7 host %r" % self.tag)
+                self.kwargs['HostName'] = y7address(self.treevars['site_id'][0], self.kwargs['_ipoffset'], 6)
+            else:
+                log.debug("adding default HostName entry for SSHservice %r" % self.tag)
+                self.kwargs['HostName'] = self.tag
         for key, value in self.kwargs.items():
             if key[0]!='_': #Blindly copy all the non meta settings
                 self.pb.append("\t%s = %s" % (key, self.kwargs[key]))
             else:
                 key=key.lower()
                 if key == '_via':
-                    self.via = value
+                    #non relative FQDN
+                    if value[-1]=='.':
+                        self.via = value[:-1]
+                    #a relative host in our subdomain
+                    elif 'domain_item' in self.treevars:
+                        self.via = ".".join([value]+self.treevars['domain_item'])
+                    else:
+                        raise NotImplementedError('Unknown via host', self.path, self.tag, value, self.treevars)
+
                 elif key == '_forward':
                     #print self.kwargs[key]
                     if 'local' in self.kwargs[key]:
@@ -161,7 +186,15 @@ class SSHoverSCBservice(SSHservice):
 class URLservice(AbstractService):
     def config(self):
         if '_via' in self.kwargs:
-            self.via = self.kwargs['_via']
+            value = self.kwargs['_via']
+            #non relative FQDN
+            if value[-1]=='.':
+                self.via = value[:-1]
+            #a relative host in our subdomain
+            elif 'domain_item' in self.treevars:
+                self.via = ".".join([value]+self.treevars['domain_item'])
+            else:
+                raise NotImplementedError('Unknown via host', value, self.tag)
         self.url = self.kwargs['url']
         self.original_url = self.kwargs['url']
 
@@ -189,7 +222,15 @@ class URLservice(AbstractService):
 class RDPservice(AbstractService):
     def config(self):
         if '_via' in self.kwargs:
-            self.via = self.kwargs['_via']
+            value = self.kwargs['_via']
+            #non relative FQDN
+            if value[-1]=='.':
+                self.via = value[:-1]
+            #a relative host in our subdomain
+            elif 'domain_item' in self.treevars:
+                self.via = ".".join([value]+self.treevars['domain_item'])
+            else:
+                raise NotImplementedError('Unknown via host', value, self.tag)
 
     def process_proxy(self, via_service, redirect_factory):
         self._original_full_address=self.kwargs["full address"]
@@ -202,7 +243,15 @@ class RDPservice(AbstractService):
 class VNCservice(AbstractService):
     def config(self):
         if '_via' in self.kwargs:
-            self.via = self.kwargs['_via']
+            value = self.kwargs['_via']
+            #non relative FQDN
+            if value[-1]=='.':
+                self.via = value[:-1]
+            #a relative host in our subdomain
+            elif 'domain_item' in self.treevars:
+                self.via = ".".join([value]+self.treevars['domain_item'])
+            else:
+                raise NotImplementedError('Unknown via host', value, self.tag)
 
     def process_proxy(self, via_service, redirect_factory):
         bindip, bindport = redirect_factory.allocate(via_service, self)
@@ -236,8 +285,13 @@ class ServiceFactory(object):
             'vnc': VNCservice
         }
 
-    def create(self, path, **kwargs):
-        return self.builders[kwargs['_type']](path, **kwargs)
+    def create(self, path, kwargs, emuserema):
+        treevars = inherit(get_ansible_treevars(emuserema.data, path))
+        return self.builders[kwargs['_type']](
+                        path = path,
+                        kwargs = kwargs,
+                        treevars = treevars
+                    )
 
     def supported(self, obj):
         return obj['_type'] in self.builders.keys()

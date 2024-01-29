@@ -7,6 +7,7 @@ from emuserema.utils import makedir_getfd, cleanup_files
 
 
 class OpenSSHRenderer(Plugin):
+    """Plugin class that render SSH configurations"""
     def config(self):
         self.description = 'openssh client configuration files renderer'
         self.ssh_config_files = {}
@@ -17,17 +18,21 @@ class OpenSSHRenderer(Plugin):
         self.template = self.jinja_env.get_template('openssh/openssh.j2')
 
     def cleanup(self):
+        """Removes all files from the destination directories"""
         cleanup_files(self._config['output_dir'])
 
-    def render_openssh(self):
+    def render(self):
+        """Actual function that renders the jinja templates"""
         for world in self.worlds:
-            with makedir_getfd("%s/%s" % (self._config['output_dir'], self.worlds[world].name)) as ssh_config_file:
+            with makedir_getfd("%s/%s" % (self._config['output_dir'],
+                    self.worlds[world].name)) as ssh_config_file:
                 print(
                     self.template.render(
                         services=list(map(
-                            lambda service: self.worlds[world].services[service],
+                            lambda service, w=world: self.worlds[w].services[service],
                             filter(
-                                lambda service: isinstance(self.worlds[world].services[service], SSHservice),
+                                lambda service, w=world:
+                                    isinstance(self.worlds[w].services[service], SSHservice),
                                 list(self.worlds[world].services.keys())
                             )
                         )),
@@ -35,8 +40,3 @@ class OpenSSHRenderer(Plugin):
                     ),
                     file=ssh_config_file
                 )
-
-    def run(self, **kwargs):
-        self.services = kwargs['services']
-        self.worlds = kwargs['worlds']
-        self.render_openssh()

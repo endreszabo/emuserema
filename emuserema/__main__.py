@@ -19,6 +19,9 @@ def main(args=None):
     parser.add_argument("-t", "--test",
             help="Only test configurations and exit.",
             action="store_true")
+    parser.add_argument("-j", "--json",
+            help="Dump parsed world configuration JSON.",
+            action="store_true")
     parser.add_argument("-d", "--dump",
             help="Dump parsed world configuration YAML.",
             action="store_true")
@@ -33,14 +36,15 @@ def main(args=None):
         definitions_directory=args.config_dir
     )
 
+    if args.json:
+        return emuserema.jsondump()
     if args.dump:
-        emuserema.dump()
+        return emuserema.dump()
     if args.test:
         print("Configuration parsing was successful.")
         exit(0)
 
     emuserema.render()
-
 
 if __name__ == '__main__':
     main()

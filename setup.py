@@ -1,7 +1,7 @@
 from setuptools import setup
 
 name = 'emuserema'
-version = '0.2'
+version = '0.2.3'
 description = 'EMUSEREMA Multiprotocol Session and Redirect Manager'
 
 
@@ -33,10 +33,10 @@ setup(
     package_data = {
         'emuserema': ['templates/*']
     },
-    install_requires=[
-        'ruamel.yaml',
-        'Jinja2',
-    ],
+#    install_requires=[
+#        'ruamel.yaml',
+#        'Jinja2',
+#    ],
     scripts=[
         'bin/viemuserema',
     ],

@@ -3,9 +3,57 @@ from os.path import expanduser, dirname, abspath, join as pathjoin, isfile
 from os import walk, path
 from shutil import rmtree
 from os import listdir, unlink
+from netaddr import IPAddress
+
+IPv4_prefix = '44.128.0.0'
+IPv6_prefix = 'fd4d:4045:e5e8::'
 
 #from __future__ import print_function
 
+def y7address(site_id, offset, family):
+    if family == 6:
+        return str(IPAddress(IPv6_prefix) + site_id * 2**72 + int(str(offset), 16))
+    elif family == 4:
+        return str(IPAddress(IPv4_prefix) + site_id * 1024 + offset)
+
+def get_ansible_treevars(data, data_path):
+    """Acquires the _ansible_treevars items from the main data dict"""
+    if len(data_path) > 1:
+        yield from get_ansible_treevars(data[data_path[0]], data_path[1:])
+    #elif isinstance(data.get(data_path[0]), dict):
+    yield data.get(data_path[0]).get('_ansible_treevars')
+
+def inherit(ansible_treevars_items):
+    """Renders the actual inheritance that it gets back from get_ansible_treevars()"""
+    retval_dict = dict()
+    for ansible_treevars_item in ansible_treevars_items:
+        #a leaf with a value
+        if ansible_treevars_item:
+            for ansible_treevars_dict in ansible_treevars_item:
+                for key, value in ansible_treevars_dict.items():
+                    if isinstance(value, str):
+                        if key not in retval_dict:
+                            retval_dict[key] = [value]
+                        else:
+                            retval_dict[key].append(value)
+                            #retval_dict[key].insert(0, value)
+                    elif isinstance(value, int):
+                        if key not in retval_dict:
+                            retval_dict[key] = [value]
+                        else:
+                            retval_dict[key].append(value)
+                            #retval_dict[key].insert(0, value)
+                    #currently we're only appending the list items, no nested lists are supported yet
+                    elif isinstance(value, list):
+                        if key not in retval_dict:
+                            retval_dict[key] = value
+                        else:
+                            retval_dict[key] + value
+                            #retval_dict[key].insert(0, value)
+                    else:
+                        raise NotImplementedError(
+                            '_ansible_treevars item with a type of %s is unsupported.' % type(value))
+    return retval_dict
 
 def cleanup_dir(target):
     for root, dirs, files in walk(target, topdown=False):

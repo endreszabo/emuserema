@@ -10,6 +10,8 @@ class Plugin(object):
     def __init__(self, config={}):
         self.description = 'UNKNOWN'
         self._config = config
+        self.worlds = {}
+        self.services = {}
         self.config()
         if 'cleanup' in self._config and self._config['cleanup'] is True:
             self.cleanup()
@@ -20,8 +22,13 @@ class Plugin(object):
     def config(self):
         raise NotImplementedError
 
-    def render(self, kwargs):
+    def render(self):
         raise NotImplementedError
+
+    def run(self, **kwargs):
+        self.services = kwargs['services']
+        self.worlds = kwargs['worlds']
+        self.render()
 
 
 class PluginManager(object):
